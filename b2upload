@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+# ##################################################
+# Backblaze Cloud Backup
+#
+version="1.0.0"               # Sets version variable
+#
+
+
+function mainScript() {
+############## Begin Script Here ###################
+####################################################
+
+if [ -s ~/.B2 ]
+    then
+        source ~/.B2
+    else
+        echo "Die Konfigurationsdatei .B2 ist nicht vorhanden"
+        safeExit        
+fi
+
+
+echo -n
+
+FILE_NAME=$(file --mime-type -b $1)
+REMOTE_PATH=$2
+
+
+echo -ne '#####                     (33%)\r'
+
+
+AUTH_REL=$(curl -s https://api.backblaze.com/b2api/v1/b2_authorize_account -u "$B2_ACCOUNT_ID:$B2_API_KEY")
+AUTH_TOKEN=$( echo "$AUTH_REL" | grep -Po '(?<="authorizationToken": ")[^"]*')
+API_URL=$( echo "$AUTH_REL" | grep -Po '(?<="apiUrl": ")[^"]*')
+
+
+echo -ne '#############             (66%)\r'
+
+
+UPLOAD_REL=$(curl -s \
+ -H 'Authorization: '"$AUTH_TOKEN"'' \
+ -d '{"bucketId": "'$B2_BUCKET_ID'"}' \
+ $API_URL/b2api/v1/b2_get_upload_url)
+
+
+UPLOAD_AUTH=$( echo "$UPLOAD_REL" | grep -Po '(?<="authorizationToken": ")[^"]*' )
+UPLOAD_URL=$( echo "$UPLOAD_REL" | grep -Po '(?<="uploadUrl": ")[^"]*' )
+FILE_TO_UPLOAD=$1
+MIME_TYPE=$(file --mime-type -b $1)
+SHA1_OF_FILE=$(openssl dgst -sha1 $FILE_TO_UPLOAD | awk '{print $2;}')
+
+
+echo -ne '#######################   (100%)\r'
+
+
+curl -s \
+    -H "Authorization: $UPLOAD_AUTH" \
+    -H "X-Bz-File-Name: $REMOTE_PATH" \
+    -H "Content-Type: $MIME_TYPE" \
+    -H "X-Bz-Content-Sha1: $SHA1_OF_FILE" \
+    -H "X-Bz-Info-Author: unknown" \
+    --data-binary "@$FILE_TO_UPLOAD" \
+    $UPLOAD_URL > /dev/null
+
+
+echo -e "Upload complete!                "
+
+
+####################################################
+############### End Script Here ####################
+}
+
+
+usage() {
+  echo -n "${scriptName} [OPTION]... [FILE]...
+This is a script template.  Edit this description to print help to users.
+ ${bold}Options:${reset}
+
+  -h, --help        Display this help and exit
+  -v, --version     Output version information and exit
+"
+}
+
+
+function safeExit() {   
+  trap - INT TERM EXIT
+  exit
+}
+
+
+# Read the options and set stuff
+while [[ $1 = -?* ]]; do
+  case $1 in
+    -h|--help) usage >&2; safeExit ;;
+    -v|--version) echo "$(basename $0) ${version}"; safeExit ;;
+#    -u|--username) shift; username=${1} ;;
+#    -p|--password) shift; echo "Enter Pass: "; stty -echo; read PASS; stty echo;
+#      echo ;;
+#    -v|--verbose) verbose=true ;;
+#    -l|--log) printLog=true ;;
+#    -q|--quiet) quiet=true ;;
+#    -s|--strict) strict=true;;
+#    -d|--debug) debug=true;;
+#    --force) force=true ;;
+#    --endopts) shift; break ;;
+    *) die "invalid option: '$1'." ;;
+  esac
+  shift
+done
+		
+
+if [ "$1" == '' ]
+    then
+        echo "Bitte eine Lokale-Datei angeben!"
+        safeExit
+fi
+
+if [ "$2" == '' ]
+    then
+        REMOTE_PATH=$(dirname $1 | sed -r 's/^.{1}//' )/$(basename $1)
+    else
+        REMOTE_PATH=$2
+fi
+
+
+# Run your script
+mainScript $1 $REMOTE_PATH $3 $4 $5
+
+# Exit cleanlyd
+safeExit
+
