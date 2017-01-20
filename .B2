@@ -1,0 +1,5 @@
+# Backblaze Configuration File
+
+B2_ACCOUNT_ID=Your-Account-ID
+B2_API_KEY=Your-Api-Key
+B2_BUCKET_ID=Your-Bucket-ID
