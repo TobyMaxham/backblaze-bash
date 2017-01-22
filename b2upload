@@ -3,7 +3,7 @@
 # ##################################################
 # Backblaze Cloud Backup
 #
-version="1.0.0"               # Sets version variable
+version="0.0.0"               # Sets version variable
 #
 
 
@@ -26,16 +26,9 @@ FILE_NAME=$(file --mime-type -b $1)
 REMOTE_PATH=$2
 
 
-echo -ne '#####                     (33%)\r'
-
-
 AUTH_REL=$(curl -s https://api.backblaze.com/b2api/v1/b2_authorize_account -u "$B2_ACCOUNT_ID:$B2_API_KEY")
 AUTH_TOKEN=$( echo "$AUTH_REL" | grep -Po '(?<="authorizationToken": ")[^"]*')
 API_URL=$( echo "$AUTH_REL" | grep -Po '(?<="apiUrl": ")[^"]*')
-
-
-echo -ne '#############             (66%)\r'
-
 
 UPLOAD_REL=$(curl -s \
  -H 'Authorization: '"$AUTH_TOKEN"'' \
@@ -49,10 +42,6 @@ FILE_TO_UPLOAD=$1
 MIME_TYPE=$(file --mime-type -b $1)
 SHA1_OF_FILE=$(openssl dgst -sha1 $FILE_TO_UPLOAD | awk '{print $2;}')
 
-
-echo -ne '#######################   (100%)\r'
-
-
 curl -s \
     -H "Authorization: $UPLOAD_AUTH" \
     -H "X-Bz-File-Name: $REMOTE_PATH" \
@@ -60,6 +49,7 @@ curl -s \
     -H "X-Bz-Content-Sha1: $SHA1_OF_FILE" \
     -H "X-Bz-Info-Author: unknown" \
     --data-binary "@$FILE_TO_UPLOAD" \
+    --progress-bar \
     $UPLOAD_URL > /dev/null
 
 
