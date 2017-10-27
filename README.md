@@ -1,6 +1,6 @@
 # Backblaze B2 Storage API Scripts
 
-A Backblaze library with some scripts to use the Backblaze B2 storage API, which includes the first 10GB of storage for free.
+A Backblaze library with some scripts to use the Backblaze B2 Storage API, which includes the first 10GB of storage for free.
 
 ***Note:*** All scripts tested on Ubtunu. Other Distributions aren't tested, but will likely work.
 
